@@ -1,0 +1,16 @@
+# action.yml
+name: 'Tag Release Action'
+description: 'Create release objects based on given tag pattern'
+author: 'Markos Chandras'
+inputs:
+  tag_regex:
+    description: 'The grep regex to use for release tags'
+    required: true
+    default: false
+outputs:
+  release_body:
+    description: 'The generated changelog body'
+
+runs:
+  using: 'docker'
+  image: 'Dockerfile'

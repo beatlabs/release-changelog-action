@@ -1,0 +1,45 @@
+#!/bin/bash
+
+set -e
+
+if [[ -z "${INPUT_TAG_REGEX}" ]]; then
+    echo "No 'tag_regex' input was specified"
+    exit 1
+fi
+
+TAG_REGEX=${INPUT_TAG_REGEX}
+
+git_fetch() {
+          git fetch --depth=1 origin +refs/tags/*:refs/tags/* # Fetch all tags to get the previous tag in the next step.
+          git fetch --prune --unshallow                       # Fetch all history to get all commits in the release body.
+}
+
+git_previous_tag() {
+    local previous_tag
+    previous_tag=$(eval git tag --sort=version:refname | grep -v "$(git describe --tags)" | grep -E "${TAG_REGEX}"| tail -n1)
+
+    # If there is no tag, just get the first commit on repo
+    [[ -z ${previous_tag} ]] && previous_tag=$(git rev-list --max-parents=0 HEAD)
+
+    echo "${previous_tag}"
+}
+
+git_generate_changelog() {
+    local prev_tag release_body
+    prev_tag=${1}
+
+    release_body=$(git log --no-merges "${prev_tag}".."${GITHUB_SHA}" --format='* [%h] %s (%an)')
+    # See: https://github.community/t5/GitHub-Actions/set-output-Truncates-Multiline-Strings/m-p/38372#M3322
+    release_body="${release_body//'%'/'%25'}"
+    release_body="${release_body//$'\n'/'%0A'}"
+    release_body="${release_body//$'\r'/'%0D'}"
+
+    echo ::set-output name=release_body::"## Changelog%0A${release_body}"
+}
+
+main() {
+    git_fetch
+    git_generate_changelog "$(git_previous_tag)"
+}
+
+main "$@"
