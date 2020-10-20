@@ -16,7 +16,8 @@ git_fetch() {
 
 git_previous_tag() {
     local previous_tag
-    previous_tag=$(eval git tag --sort=version:refname | grep -v "$(git describe --tags)" | grep -E "${TAG_REGEX}"| tail -n1)
+    # shellcheck disable=SC2046 disable=SC2086
+    previous_tag=$(eval git tag --sort=version:refname | grep -v $(git tag --contains $(git rev-parse HEAD) | grep -E ${TAG_REGEX}) | grep -E "${TAG_REGEX}" | tail -n1)
 
     # If there is no tag, just get the first commit on repo
     [[ -z ${previous_tag} ]] && previous_tag=$(git rev-list --max-parents=0 HEAD)
