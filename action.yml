@@ -7,9 +7,15 @@ inputs:
     description: 'The grep regex to use for release tags'
     required: true
     default: false
+  version_bump:
+    description: 'The version (major, minor or patch) you wish to bump'
+    required: false
+    default:
 outputs:
   release_body:
     description: 'The generated changelog body'
+  release_tag:
+    description: 'The tag of the release'
 
 runs:
   using: 'docker'
