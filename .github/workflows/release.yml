@@ -9,7 +9,7 @@ jobs:
     name: "Release"
     runs-on: "ubuntu-latest"
     steps:
-      - uses: "marvinpinto/action-automatic-releases@8d9ddb2546e687f72855285d2719a11709cea6d0"
+      - uses: "marvinpinto/action-automatic-releases@4951e72708bd9a79dce9d5c81425b028a7ab407b"
         with:
           repo_token: "${{ github.token }}"
           prerelease: false
