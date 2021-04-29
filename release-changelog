@@ -7,11 +7,16 @@ if [[ -z "${INPUT_TAG_REGEX}" ]]; then
     exit 1
 fi
 
+if [[ -z "${INPUT_VERSION_BUMP}" ]]; then
+    echo "No 'version_bump' input was specified. Skipping tagging commit."
+fi
+
 TAG_REGEX=${INPUT_TAG_REGEX}
+VERSION_BUMP=${INPUT_VERSION_BUMP}
 
 git_fetch() {
-          git fetch --depth=1 origin +refs/tags/*:refs/tags/* # Fetch all tags to get the previous tag in the next step.
-          git fetch --prune --unshallow                       # Fetch all history to get all commits in the release body.
+    git fetch --depth=1 origin +refs/tags/*:refs/tags/* # Fetch all tags to get the previous tag in the next step.
+    git fetch --prune --unshallow                       # Fetch all history to get all commits in the release body.
 }
 
 git_previous_tag() {
@@ -38,9 +43,51 @@ git_generate_changelog() {
     echo ::set-output name=release_body::"## Changelog%0A${release_body}"
 }
 
+git_next_tag() {
+    local version
+    version=$(git describe --abbrev=0 --tags "$(git rev-list --tags --skip=0 --max-count=1)")
+    IFS=. read -r major minor patch <<<"$version"
+    # Remove "v" from major
+    major=${major#?}
+    case $VERSION_BUMP in
+        major)
+            ((major++))
+            minor=0
+            patch=0
+            ;;
+        minor)
+            ((minor++))
+            patch=0
+            ;;
+        patch)
+            ((patch++))
+            ;;
+        *)
+            echo -n "Version bump input can be: major, minor or patch."
+            exit 1
+            ;;
+    esac
+    printf -v version 'v%d.%d.%d' "$((major))" "$((minor))" "$((patch))"
+    echo "${version}"
+}
+
+git_tag_commit() {
+    local new_tag
+    new_tag=${1}
+    echo "Tagging latest commit with ${new_tag}"
+    git tag "${new_tag}"
+    git push origin "${new_tag}"
+}
+
+git_output_latest_tag() {
+  echo ::set-output name=release_tag::"$(git describe --abbrev=0 --tags "$(git rev-list --tags --skip=0 --max-count=1)")"
+}
+
 main() {
     git_fetch
+    [[ -n ${VERSION_BUMP} ]] && git_tag_commit "$(git_next_tag)"
     git_generate_changelog "$(git_previous_tag)"
+    git_output_latest_tag
 }
 
 main "$@"
